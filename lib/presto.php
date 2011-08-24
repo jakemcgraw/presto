@@ -277,7 +277,7 @@ function _presto_xml2array(array $arr, SimpleXMLElement $sxml)
             _presto_xml2array($v, $sxml->addChild($k));
         }
         else if (is_int($k)) {
-            $sxml->addChild("var".$k, $v);
+            $sxml->addChild("var", $v);
         }
         else {
             $sxml->addChild($k, $v);
