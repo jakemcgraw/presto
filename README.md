@@ -4,72 +4,72 @@
 
 ### Pretty URLs
 
-**GET /** maps to
-```presto_get_index_index();```
+**GET /**
 
-**GET /foo** maps to
+maps to ```presto_get_index_index();```
 
-```presto_get_foo_index();```
+**GET /foo**
 
-**GET /foo/bar** maps to
+maps to ```presto_get_foo_index();```
 
-```presto_get_foo_bar();```
+**GET /foo/bar** 
 
-**GET /foo/bar-foo** maps to
+maps to ```presto_get_foo_bar();```
 
-```presto_get_foo_barFoo();```
+**GET /foo/bar-foo** 
+
+maps to ```presto_get_foo_barFoo();```
 
 ### URL Variables
 
-**GET /foo/bar/12345** maps to
+**GET /foo/bar/12345** 
 
-```presto_get_foo_bar(array("12345"));```
+maps to ```presto_get_foo_bar(array("12345"));```
 
-**GET /foo/bar/hello/world** maps to
+**GET /foo/bar/hello/world** 
 
-```presto_get_foo_bar(array("hello" => "world"));```
+maps to ```presto_get_foo_bar(array("hello" => "world"));```
 
-**GET /foo/bar/hello/world/12345** maps to
+**GET /foo/bar/hello/world/12345** 
 
-```presto_get_foo_bar(array("hello" => "world", "12345"));```
+maps to ```presto_get_foo_bar(array("hello" => "world", "12345"));```
 
 ### Filetype detection
+**GET /foo/bar.json** 
 
-**GET /foo/bar.json** maps to
+maps to ```presto_get_foo_bar();```
 
-```presto_get_foo_bar();```which outputs
+which outputs ```{"success":"true","result":...}```
 
-```{"success":"true","result":...}```
+**GET /foo/bar/hello.xml**
 
-**GET /foo/bar/hello.xml** maps to
+maps to ```presto_get_foo_bar(array("hello"));```
 
-```presto_get_foo_bar(array("hello"));```which outputs
+which outputs ```<?xml version="1.0"?><response><success>true</success><result>...</result></response>```
 
-```<?xml version="1.0"?><response><success>true</success><result>...</result></response>```
+**GET /foo/bar/hello/world.js?callback=demo**
 
-**GET /foo/bar/hello/world.js?callback=demo** maps to
+maps to ```presto_get_foo_bar(array("hello" => "world", "callback" => "demo"));```which outputs
 
-```presto_get_foo_bar(array("hello" => "world", "callback" => "demo"));```which outputs
+which outputs ```demo( {"success":"true","result":...} );```
 
-```demo( {"success":"true","result":...} );```
-
-Currently supports JSON, XML and JSONP (requires callback parameter).
+Currently supports JSON, XML and JSONP (requires _callback_ parameter).
 
 ### HTTP Verbs
 
 **POST /**
 
-```presto_post_index_index();```
+maps to ```presto_post_index_index();```
 
 **PUT /**
 
-```presto_put_index_index();```
+maps to ```presto_put_index_index();```
 
 **DELETE /**
 
-```presto_delete_index_index();```
+maps to ```presto_delete_index_index();```
 
 **HEAD /**
 
-```presto_head_index_index();```
+maps to ```presto_head_index_index();```
  
