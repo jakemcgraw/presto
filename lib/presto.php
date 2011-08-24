@@ -69,17 +69,25 @@ function presto_route($method, $request, $base_url=null)
     }, $parts);
     
     // last variable is allowed to indicate filetype
+    // generate _presto_filetype from request path
     if (!empty($vars)) {
         $vals = array_values($vars);
         $last = $vals[count($vals)-1];
+        $keys = array_keys($vars);
+        $vars[$keys[count($keys)-1]] = preg_replace('/\.[^.]+$/', "", $last);
     }
     else {
-        $last = $parts[1];
-        $parts[1] = preg_replace('/\.[^.]+$/', "", $last);
+        for($i=1; $i>-1; $i--) {
+            if (false !== strpos($parts[$i], ".")) {
+                $last = $parts[$i];
+                $parts[$i] = preg_replace('/\.[^.]+$/', "", $last);
+                break;
+            }
+        }
     }
     
     // check for filetype
-    if (false !== strpos($last, ".")) {
+    if (isset($last) && false !== strpos($last, ".")) {
         if (preg_match("/\.(\w+)$/", $last, $match)) {
             $vars["_presto_filetype"] = $match[1];
         }
@@ -140,7 +148,7 @@ function presto_send($body, array $headers=array())
     echo $body;
 }
 
-function presto_encode($func, array $vars=array(), $type=null)
+function presto_encode($func, array $vars=array(), $type=null, $with_request=true)
 {
     $type_map = array(
         "js" => "jsonp", "json" => "json", "xml" => "xml",
@@ -184,11 +192,14 @@ function presto_encode($func, array $vars=array(), $type=null)
     
     $response = array(
         "success" => ($success ? "true" : "false"),
-        "request" => array(
-            "func" => str_replace("presto_", "", $func),
-            "vars" => $vars
-        )
     );
+    
+    if ($with_request) {
+        $response["request"] = array(
+            "func" => str_replace("presto_", "", $func),
+            "vars" => $vars,
+        );
+    }
     
     if (!$success) {
         if (isset($result["http"]["errno"])) {

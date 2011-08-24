@@ -1,34 +1,59 @@
 ## presto: A micro framework for mapping HTTP requests to PHP function calls
 
-### Example
+### Features
 
-    <?php
+#### Pretty URLs
 
-    // HTTP GET / maps to
-    presto_get_index_index();
+**GET /** maps to
+```php presto_get_index_index();```
 
-    // HTTP GET /foo maps to
-    presto_get_foo_index();
+**GET /foo** maps to
+```php presto_get_foo_index();```
 
-    // HTTP GET /foo/bar maps to
-    presto_get_foo_bar();
+**GET /foo/bar** maps to
+```php presto_get_foo_bar();```
 
-    // HTTP GET /foo/bar-bar maps to
-    presto_get_foo_barBar();
+**GET /foo/bar-foo** maps to
+```php presto_get_foo_barFoo();```
 
-    // HTTP POST /foo/bar maps to
-    presto_post_foo_bar(array(/* post variables */));
+#### URL Variables
 
-    // HTTP GET /foo/bar/12345 maps to
-    presto_get_foo_bar(array(12345));
+**GET /foo/bar/12345** maps to
+```php presto_get_foo_bar(array("12345"));```
 
-    // HTTP POST /foo/bar/hello maps to 
-    presto_post_foo_bar(array("hello", /* post variables */));
+**GET /foo/bar/hello/world** maps to
+```php presto_get_foo_bar(array("hello" => "world"));```
 
-    // HTTP GET /foo/bar/hello/world/monkey maps to
-    presto_get_foo_bar(array("hello" => "world", "monkey"));
+**GET /foo/bar/hello/world/12345** maps to
+```php presto_get_foo_bar(array("hello" => "world", "12345"));```
 
-## Install
+#### Filetype detection
 
-    TODO
+**GET /foo/bar.json** maps to
+```php presto_get_foo_bar();``` which outputs
+```js {"success":"true","result":...}```
+
+**GET /foo/bar/hello.xml** maps to
+```php presto_get_foo_bar(array("hello"));``` which outputs
+```xml <?xml version="1.0"?><response><success>true</success><result>...</result></response>```
+
+**GET /foo/bar/hello/world.js?callback=demo** maps to
+```php presto_get_foo_bar(array("hello" => "world", "callback" => "demo"));``` which outputs
+```js demo( {"success":"true","result":...} );```
+
+Currently supports JSON, XML and JSONP (requires callback parameter).
+
+#### HTTP Verbs
+
+**POST /**
+```php presto_post_index_index();```
+
+**PUT /**
+```php presto_put_index_index();```
+
+**DELETE /**
+```php presto_delete_index_index();```
+
+**HEAD /**
+```php presto_head_index_index();```
  
