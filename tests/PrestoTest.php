@@ -1,6 +1,7 @@
 <?php
 
 require_once "PHPUnit/Framework/TestCase.php";
+
 require_once "../lib/presto.php";
 require_once "../app/demo.php";
 
@@ -101,11 +102,11 @@ class PrestoTest extends PHPUnit_Framework_TestCase
         
         list($func, $vars) = presto_route("GET", "/foo/bar/hello.js");
         $this->assertEquals("presto_get_foo_bar", $func);
-        $this->assertEquals(array("hello.js", "_presto_filetype" => "js"), $vars);
+        $this->assertEquals(array("hello", "_presto_filetype" => "js"), $vars);
         
         list($func, $vars) = presto_route("GET", "/foo/bar/hello/world.js");
         $this->assertEquals("presto_get_foo_bar", $func);
-        $this->assertEquals(array("hello" => "world.js", "_presto_filetype" => "js"), $vars);
+        $this->assertEquals(array("hello" => "world", "_presto_filetype" => "js"), $vars);
     }
     
     public function testExec()
@@ -128,7 +129,7 @@ class PrestoTest extends PHPUnit_Framework_TestCase
         
         list($success, $result) = presto_exec("presto_get_demo_time");
         $this->assertTrue($success);
-        $this->assertInternalType("int", $result);
+        $this->assertInternalType("string", $result);
         
         list($func, $vars) = presto_route("GET", "/demo/echo/");
         list($success, $result) = presto_exec($func, $vars);
