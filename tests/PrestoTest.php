@@ -96,14 +96,14 @@ class PrestoTest extends PHPUnit_Framework_TestCase
     {
         list($func, $vars) = presto_route("GET", "/foo/bar.js");
         $this->assertEquals("presto_get_foo_bar", $func);
-        $this->assertEquals(array("_filetype" => "js"), $vars);
+        $this->assertEquals(array("_presto_filetype" => "js"), $vars);
         
         list($func, $vars) = presto_route("GET", "/foo/bar/hello.js");
         $this->assertEquals("presto_get_foo_bar", $func);
-        $this->assertEquals(array("hello.js", "_filetype" => "js"), $vars);
+        $this->assertEquals(array("hello.js", "_presto_filetype" => "js"), $vars);
         
         list($func, $vars) = presto_route("GET", "/foo/bar/hello/world.js");
         $this->assertEquals("presto_get_foo_bar", $func);
-        $this->assertEquals(array("hello" => "world.js", "_filetype" => "js"), $vars);
+        $this->assertEquals(array("hello" => "world.js", "_presto_filetype" => "js"), $vars);
     }
 }

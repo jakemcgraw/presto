@@ -81,7 +81,7 @@ function presto_route($method, $request, $base_url=null)
     // check for filetype
     if (false !== strpos($last, ".")) {
         if (preg_match("/\.(\w+)$/", $last, $match)) {
-            $vars["_filetype"] = $match[1];
+            $vars["_presto_filetype"] = $match[1];
         }
     }
     
@@ -117,6 +117,9 @@ function presto_exec($func, array $vars=array())
         ));
     }
     
+    /*
+        TODO autoload
+    */
     if (!function_exists($func)) {
         return array(false, array(
             "http" => array(
@@ -126,34 +129,77 @@ function presto_exec($func, array $vars=array())
         ));
     }
     
-    $result = $func($vars);
+    return $func($vars);
 }
 
-/**
- * Executes a function based on URI, HTTP request, sends JSON response
- *
- * @param string $func Function to execute, provided by presto_route()
- * @param array $vars Parameters to pass to presto function (optional)
- * @return mixed String or array on success, FALSE on error
- * @author Jake McGraw <social@jakemcgraw.com>
- */
-function presto_exec_json($func, array $vars=array())
+function presto_send($body, array $headers=array())
 {
+    foreach($headers as $header) {
+        header($header);
+    }
+    echo $body;
+}
+
+function presto_encode($func, array $vars=array(), $type=null)
+{
+    $type_map = array(
+        "js" => "jsonp", "json" => "json", "xml" => "xml",
+    );
+    
+    if (null === $type && isset($vars["_presto_filetype"])) {
+        $type = $vars["_presto_filetype"];
+    }
+    else {
+        $type = "json";
+    }
+    
+    if (!isset($type_map[$type])) {
+        return array(
+            "400\nInvalid Request, invalid API response type $type",
+            array(
+                "http" => "HTTP/1.0 400 Invalid Request",
+            )
+        );
+    }
+    
+    $type_map[$type];
+    
+    $encoder_func = "presto_encode_" . $type;
+    if (!function_exists($encoder_func)) {
+        return array(
+            "500\nInternal Server Error, unhandled API response type $type",
+            array(
+                "http" => "HTTP/1.0 500 Internal Server Error",
+            )
+        );
+    }
+    
     ob_start();
     list($success, $result) = presto_exec($func, $vars);
     $output = ob_get_clean();
     
-    $response = array();
+    $headers = array();
+    
+    $response = array(
+        "success" => ($success ? "true" : "false"),
+        "request" => array(
+            "func" => str_replace("presto_", "", $func),
+            "vars" => $vars
+        )
+    );
     
     if (!$success) {
         if (isset($result["http"]["errno"])) {
-            header("HTTP/1.0 " . $result["http"]["errno"] . " " . $result["http"]["error"]);
-            $response = $result["http"];
+            $headers["http"] = "HTTP/1.0 " . $result["http"]["errno"] . " " . $result["http"]["error"];
+            $response["result"] = $result["http"];
         }
         else {
-            header("HTTP/1.0 500 Internal Server Error");
-            $response = $result;
+            $headers["http"] = "HTTP/1.0 500 Internal Server Error";
+            $response["result"] = $result;
         }
+    }
+    else if (is_string($result) || is_array($result)) {
+        $response["result"] = $result;
     }
     
     // shouldn't generate any output, captured here though
@@ -161,59 +207,69 @@ function presto_exec_json($func, array $vars=array())
         $response["output"] = $output;
     }
     
-    if ($success && (is_string($result) || is_array($result))) {
-        $response["result"] = $result;
-    }
+    return $encoder_func($response, $headers);
+}
 
-    $json = "";
-    
+function presto_encode_json(array $response, array $headers=array())
+{
     // try to encode response
-    if (!empty($response) && (false === ($json = @json_encode($response)))) {
-        
-        // error encoding response
-        if ($success) {
-            header("HTTP/1.0 500 Internal Server Error");
-        }
+    $json = @json_encode($response);
     
-        $response = array(
-            "error" => "Unable to encode API response",
-            "errno" => 500 + ((int) json_last_error())
-        );
-    
-        $json = json_encode($response);
+    if (false === $json) {
+        $headers["http"] = "HTTP/1.0 500 Internal Server Error";
+        $json = "{\"success\":\"false\", \"error\":\"Unable to encode API response, JSON error\", \"errno\":\"".(500 + ((int) json_last_error()))."\"}";
     }
     
-    header("Content-type: application/json");
-    echo $json;
+    $headers["content"] = "Content-type: application/json";
     
-    return $result;
+    return array($json, $headers);
 }
 
-
-function presto_exec_jsonp($func, array $vars=array())
+function presto_encode_jsonp(array $response, array $headers=array())
 {
-    /*
-        TODO 
-    */
+    if (!isset($response["request"]["vars"]["callback"])) {
+        $headers["http"] = "HTTP/1.0 400 Bad Request";
+        $body = "400\nMissing required parameter 'callback'\n";
+        return array($body, $headers);
+    }
+    
+    $callback = $response["request"]["vars"]["callback"];
+    list($json, $headers) = presto_encode_json($response, $headers);
+    $headers["content"] = "Content-type: text/javascript";
+    $js = $callback . "( " .  $json . " );\n";
+    
+    return array($js, $headers);
 }
 
-function presto_exec_html($func, array $vars=array())
+function presto_encode_xml(array $response, array $headers=array())
 {
-    /*
-        TODO 
-    */
+    $sxml = _presto_xml2array($response, new SimpleXMLElement('<response />'));
+    $headers["content"] = "Content-type: text/xml";
+    return array($sxml->toXML(), $result);
 }
 
-function presto_exec_xml($func, array $vars=array())
+/**
+ * Convert array into SimpleXMLElement
+ *
+ * @param array $arr 
+ * @param SimpleXMLElement $sxml 
+ * @return SimpleXMLElement
+ * @author onokazu
+ * @link http://stackoverflow.com/questions/1397036/how-to-convert-array-to-simplexml/3289602#3289602
+ */
+function _presto_xml2array(array $arr, SimpleXMLElement $sxml)
 {
-    /*
-        TODO 
-    */
-}
-
-function presot_exec_txt($func, array $vars=array())
-{
-    /*
-        TODO 
-    */
+    foreach ($arr as $k => $v) {
+        if (is_array($v)) {
+            _presto_xml2array($v, $sxml->addChild($k));
+        }
+        else if (is_int($k)) {
+            $sxml->addChild("var".$k, $v);
+        }
+        else {
+            $sxml->addChild($k, $v);
+        }
+    }
+    
+    return $sxml;
 }
