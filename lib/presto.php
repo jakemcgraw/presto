@@ -108,7 +108,7 @@ function presto_route($method, $request, $base_url=null)
  */
 function presto_exec($func, array $vars=array())
 {
-    if (false === $func || !is_string($func)) {
+    if (empty($func) || !is_string($func) || strpos($func, "presto_") !== 0) {
         return array(false, array(
             "http" => array(
                 "error" => "Invalid Method",
@@ -146,11 +146,13 @@ function presto_encode($func, array $vars=array(), $type=null)
         "js" => "jsonp", "json" => "json", "xml" => "xml",
     );
     
-    if (null === $type && isset($vars["_presto_filetype"])) {
-        $type = $vars["_presto_filetype"];
-    }
-    else {
-        $type = "json";
+    if (null === $type) {
+        if (isset($vars["_presto_filetype"])) {
+            $type = $vars["_presto_filetype"];
+        }
+        else {
+            $type = "json";
+        }
     }
     
     if (!isset($type_map[$type])) {
@@ -162,7 +164,7 @@ function presto_encode($func, array $vars=array(), $type=null)
         );
     }
     
-    $type_map[$type];
+    $type = $type_map[$type];
     
     $encoder_func = "presto_encode_" . $type;
     if (!function_exists($encoder_func)) {
@@ -245,7 +247,7 @@ function presto_encode_xml(array $response, array $headers=array())
 {
     $sxml = _presto_xml2array($response, new SimpleXMLElement('<response />'));
     $headers["content"] = "Content-type: text/xml";
-    return array($sxml->toXML(), $result);
+    return array($sxml->asXML(), $headers);
 }
 
 /**

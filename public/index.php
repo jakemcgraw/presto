@@ -1,7 +1,7 @@
 <?php
 
-require_once "../app/presto.php";
-// require_once "../app/<YOUR PRESTO FUNCTIONS>.php";
+require_once "../lib/presto.php";
+require_once "../app/demo.php";
 
 // route request to figure out function name and variables
 list($func, $vars) = presto_route(
