@@ -156,6 +156,9 @@ function presto_exec($func, array $vars=array())
                 $result = $return;
             }
         }
+        else {
+            $result = null;
+        }
     }
     else if (is_bool($return)) {
         $success = $return;
