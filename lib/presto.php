@@ -137,7 +137,42 @@ function presto_exec($func, array $vars=array())
         ));
     }
     
-    return $func($vars);
+    $return = $func($vars);
+    
+    // allow lazy returns false, [false], [false,...] maps to failure
+    // everything else is success
+    
+    if (is_array($return) && isset($return[0]) && is_bool($return[0])) {
+        $success = $return[0];
+        array_shift($return);
+        if (null !== $return) {
+            if (0 == count($return)) {
+                $result = null;
+            }
+            else if (1 === count($return) && array_key_exists(0, $return)) {
+                $result = $return[0];
+            }
+            else {
+                $result = $return;
+            }
+        }
+    }
+    else if (is_bool($return)) {
+        $success = $return;
+        $result = null;
+    }
+    else {
+        $success = true;
+        $result = $return;
+    }
+    
+    // null and empty 
+    
+    if (!isset($result)) {
+        $result = "empty";
+    }
+    
+    return array($success, $result);
 }
 
 function presto_send($body, array $headers=array())
@@ -187,6 +222,8 @@ function presto_encode($func, array $vars=array(), $type=null, $with_request=tru
     ob_start();
     list($success, $result) = presto_exec($func, $vars);
     $output = ob_get_clean();
+    
+    // implicit success when not false
     
     $headers = array();
     

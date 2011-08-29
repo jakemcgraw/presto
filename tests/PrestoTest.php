@@ -140,6 +140,41 @@ class PrestoTest extends PHPUnit_Framework_TestCase
         list($success, $result) = presto_exec($func, $vars);
         $this->assertTrue($success);
         $this->assertEquals("hello", $result);
+        
+        // failure results
+        foreach(range(1,3) as $idx) {
+            list($success) = presto_exec("presto_get_demo_alwaysFail$idx");
+            $this->assertFalse($success);
+        }
+        
+        // successful, empty results
+        foreach(array("nothing", "empty", "null", "true", "trueArray") as $type) {
+            list($success, $result) = presto_exec("presto_get_demo_$type");
+            $this->assertTrue($success);
+            $this->assertEquals("empty", $result);
+        }
+        
+        // successful, not empty results
+        foreach(array("int0", "emptyString", "string0", "array") as $type) {
+            list($success, $result) = presto_exec("presto_get_demo_$type");
+            $this->assertTrue($success);
+            $this->assertThat(
+                "empty", $this->logicalNot($this->equalTo($result))
+            );
+        }
+        
+        list($success, $result) = presto_exec("presto_get_demo_singleElement");
+        $this->assertTrue($success);
+        $this->assertEquals(array("hello world"), $result);
+        
+        list($success, $result) = presto_exec("presto_get_demo_multipleElements");
+        $this->assertTrue($success);
+        $this->assertEquals(array("hello world", "foobar"), $result);
+        
+        
+        list($success, $result) = presto_exec("presto_get_demo_multipleKeys");
+        $this->assertTrue($success);
+        $this->assertEquals(array("hello" => "world"), $result);
     }
     
     public function testEncode()
