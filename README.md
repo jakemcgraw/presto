@@ -91,3 +91,7 @@ function presto_get_demo_success() { return array(1, "Whoops!"); }
 
 ```
 
+## Requirements
+
+* PHP 5.3+
+* Apache w/ mod_rewrite
