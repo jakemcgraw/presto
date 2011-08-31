@@ -118,9 +118,8 @@ function presto_exec($func, array $vars=array())
 {
     if (empty($func) || !is_string($func) || strpos($func, "presto_") !== 0) {
         return array(false, array(
-            "http" => array(
-                "error" => "Invalid Method",
-                "errno" => 405,
+            "error" => array(
+                "status" => "Invalid Method", "code" => 405,
             ),
         ));
     }
@@ -130,9 +129,8 @@ function presto_exec($func, array $vars=array())
     */
     if (!function_exists($func)) {
         return array(false, array(
-            "http" => array(
-                "error" => "Not Found",
-                "errno" => 404,
+            "error" => array(
+                "status" => "Not Found", "code" => 404,
             ),
         ));
     }
@@ -186,24 +184,24 @@ function presto_send($body, array $headers=array())
     echo $body;
 }
 
-function presto_encode($func, array $vars=array(), $type=null, $with_request=true)
+function presto_encode($func, array $vars=array(), $type="json", $with_request=true)
 {
     $type_map = array(
-        "js" => "jsonp", "json" => "json", "xml" => "xml",
+        "js" => "jsonp", "json" => "json", "xml" => "xml", "htm" => "html", "html" => "html"
     );
     
-    if (null === $type) {
-        if (isset($vars["_presto_filetype"])) {
-            $type = $vars["_presto_filetype"];
-        }
-        else {
-            $type = "json";
-        }
+    // requested type overrides default
+    if (isset($vars["_presto_filetype"])) {
+        $type = $vars["_presto_filetype"];
+    }
+    // no requested type, use default
+    else {
+        $vars["_presto_filetype"] = $type;
     }
     
     if (!isset($type_map[$type])) {
         return array(
-            "400\nInvalid Request, invalid API response type $type",
+            "Invalid Request, invalid API response type " . htmlspecialchars($type),
             array(
                 "http" => "HTTP/1.0 400 Invalid Request",
             )
@@ -215,7 +213,7 @@ function presto_encode($func, array $vars=array(), $type=null, $with_request=tru
     $encoder_func = "presto_encode_" . $type;
     if (!function_exists($encoder_func)) {
         return array(
-            "500\nInternal Server Error, unhandled API response type $type",
+            "Internal Server Error, un-handled API response type " . htmlspecialchars($type),
             array(
                 "http" => "HTTP/1.0 500 Internal Server Error",
             )
@@ -242,14 +240,13 @@ function presto_encode($func, array $vars=array(), $type=null, $with_request=tru
     }
     
     if (!$success) {
-        if (isset($result["http"]["errno"])) {
-            $headers["http"] = "HTTP/1.0 " . $result["http"]["errno"] . " " . $result["http"]["error"];
-            $response["result"] = $result["http"];
+        if (isset($result["error"]["status"])) {
+            $headers["http"] = "HTTP/1.0 " . $result["error"]["code"] . " " . $result["error"]["status"];
         }
         else {
             $headers["http"] = "HTTP/1.0 500 Internal Server Error";
-            $response["result"] = $result;
         }
+        $response["result"] = $result;
     }
     else if (is_string($result) || is_array($result)) {
         $response["result"] = $result;
@@ -282,7 +279,7 @@ function presto_encode_jsonp(array $response, array $headers=array())
 {
     if (!isset($response["request"]["vars"]["callback"])) {
         $headers["http"] = "HTTP/1.0 400 Bad Request";
-        $body = "400\nMissing required parameter 'callback'\n";
+        $body = "Missing required parameter 'callback'\n";
         return array($body, $headers);
     }
     
@@ -299,6 +296,54 @@ function presto_encode_xml(array $response, array $headers=array())
     $sxml = _presto_xml2array($response, new SimpleXMLElement('<response />'));
     $headers["content"] = "Content-type: text/xml";
     return array($sxml->asXML(), $headers);
+}
+
+function presto_encode_html(array $response, array $headers=array())
+{
+    $headers["content"] = "Content-type: text/html";
+    
+    if (is_string($response)) {
+        $body = $response;
+    }
+    else if (is_array($response) && isset($response["result"])) {
+        $result = $response["result"];
+        if (is_array($result)) {
+            if (isset($result["error"])) {
+                if (is_array($result["error"])) {
+                    if (isset($result["error"]["status"])) {
+                        $body = $result["error"]["code"] . " " . $result["error"]["status"];
+                    }
+                    else {
+                        $body = implode(", ", $result["error"]);
+                    }
+                }
+                else {
+                    $body = $result["error"];
+                }
+            }
+            else {
+                $body = implode(", ", $result);
+            }
+        }
+        else {
+            $body = $result;
+        }
+    }
+    
+    return array($body, $headers);
+}
+
+function presto_check_filetype(array $vars, array $supported_types=array())
+{
+    return isset($vars["_presto_filetype"]) &&
+        in_array($vars["_presto_filetype"], $supported_types);
+}
+
+function presto_check_filetype_html($vars)
+{
+    if (!presto_check_filetype($vars, array("htm", "html"))) {
+        return array(false, array("error" => array("status" => "Not Found", "code" => 404)));
+    }
 }
 
 /**

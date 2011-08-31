@@ -99,9 +99,9 @@ function presto_get_demo_multipleKeys()
 function presto_get_demo_httpError()
 {
     return array(false, array(
-        "http" => array(
-            "error" => "Failboat",
-            "errno" => 599,
+        "error" => array(
+            "status" => "Failboat",
+            "code" => 599,
         ),
     ));
 }

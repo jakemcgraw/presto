@@ -115,13 +115,13 @@ class PrestoTest extends PHPUnit_Framework_TestCase
             list($success, $result) = presto_exec($bad_input);
             $this->assertFalse($success);
             $this->assertInternalType("array", $result);
-            $this->assertEquals(405, $result["http"]["errno"]);
+            $this->assertEquals(405, $result["error"]["code"]);
         }
         
         list($success, $result) = presto_exec("presto_will_fail");
         $this->assertFalse($success);
         $this->assertInternalType("array", $result);
-        $this->assertEquals(404, $result["http"]["errno"]);
+        $this->assertEquals(404, $result["error"]["code"]);
         
         list($success, $result) = presto_exec("presto_get_demo_echo", array("echo" => "hello"));
         $this->assertTrue($success);
@@ -186,7 +186,7 @@ class PrestoTest extends PHPUnit_Framework_TestCase
         $this->assertInternalType("array", $response);
         $this->assertArrayHasKey("result", $response);
         $this->assertEquals("false", $response["success"]);
-        $this->assertEquals(array("error" => "Failboat", "errno" => 599), $response["result"]);
+        $this->assertEquals(array("error" => array("status" => "Failboat", "code" => 599)), $response["result"]);
         
         // json
         list($func, $vars) = presto_route("GET", "/demo/echo/");
