@@ -114,63 +114,82 @@ function presto_route($method, $request, $base_url=null)
  * @return mixed String or array on success, FALSE on error
  * @author Jake McGraw <social@jakemcgraw.com>
  */
-function presto_exec($func, array $vars=array())
+function presto_exec($func, array $vars=array(), $throw_exception=false)
 {
     if (empty($func) || !is_string($func) || strpos($func, "presto_") !== 0) {
-        return array(false, array(
-            "error" => array(
-                "status" => "Invalid Method", "code" => 405,
-            ),
-        ));
+        $success = false;
+        $result = array("error" => array("status" => "Invalid Method", "code" => 405));
     }
-    
-    /*
-        TODO autoload
-    */
-    if (!function_exists($func)) {
-        return array(false, array(
-            "error" => array(
-                "status" => "Not Found", "code" => 404,
-            ),
-        ));
+    else if (!function_exists($func)) {
+        $success = false;
+        $result = array("error" => array("status" => "Not Found", "code" => 404));
     }
-    
-    $return = $func($vars);
-    
-    // allow lazy returns false, [false], [false,...] maps to failure
-    // everything else is success
-    
-    if (is_array($return) && isset($return[0]) && is_bool($return[0])) {
-        $success = $return[0];
-        array_shift($return);
-        if (null !== $return) {
-            if (0 == count($return)) {
-                $result = null;
-            }
-            else if (1 === count($return) && array_key_exists(0, $return)) {
-                $result = $return[0];
+    else {
+        $return = $func($vars);
+
+        // allow lazy returns false, [false], [false,...] maps to failure
+        // everything else is success
+
+        if (is_array($return) && isset($return[0]) && is_bool($return[0])) {
+            $success = $return[0];
+            array_shift($return);
+            if (null !== $return) {
+                if (0 == count($return)) {
+                    $result = null;
+                }
+                else if (1 === count($return) && array_key_exists(0, $return)) {
+                    $result = $return[0];
+                }
+                else {
+                    $result = $return;
+                }
             }
             else {
-                $result = $return;
+                $result = null;
+            }
+        }
+        else if (is_bool($return)) {
+            $success = $return;
+            $result = null;
+        }
+        else {
+            $success = true;
+            $result = $return;
+        }
+
+        // null and empty 
+
+        if (!isset($result)) {
+            $result = "empty";
+        }
+    }
+    
+    if ($throw_exception && !$success) {
+        $message = "error";
+        $code = -1;
+        if (is_array($result)) {
+            if (isset($result["error"])) {
+                if (is_array($result["error"])) {
+                    if (isset($result["error"]["status"])) {
+                        $message = $result["error"]["status"];
+                        $code = $result["error"]["code"];
+                    }
+                    else {
+                        $message = implode(" ", $result["error"]);
+                    }
+                }
+                else {
+                    $message = $result["error"];
+                }
+            }
+            else {
+                $message = implode(" ", $result);
             }
         }
         else {
-            $result = null;
+            $message = $result;
         }
-    }
-    else if (is_bool($return)) {
-        $success = $return;
-        $result = null;
-    }
-    else {
-        $success = true;
-        $result = $return;
-    }
-    
-    // null and empty 
-    
-    if (!isset($result)) {
-        $result = "empty";
+        throw new PrestoException($message, $code);
     }
     
     return array($success, $result);
@@ -371,3 +390,5 @@ function _presto_xml2array(array $arr, SimpleXMLElement $sxml)
     
     return $sxml;
 }
+
+class PrestoException extends Exception {}

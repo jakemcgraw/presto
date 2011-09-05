@@ -1,9 +1,10 @@
 <?php
 
 require_once "PHPUnit/Framework/TestCase.php";
+require_once "bootstrap.php";
 
-require_once "../lib/presto.php";
-require_once "../app/demo.php";
+require_once LIB_DIR . "/presto.php";
+require_once APP_DIR . "/api/demo.php";
 
 class PrestoTest extends PHPUnit_Framework_TestCase
 {
@@ -232,5 +233,37 @@ class PrestoTest extends PHPUnit_Framework_TestCase
         list($body, $headers) = presto_encode($func, array_merge(array("callback" => $callback), $vars));
         $this->assertContains("Content-type: text/javascript", $headers);
         $this->assertStringStartsWith($callback . "(", $body);
+        
+        // html
+        list($func, $vars) = presto_route("GET", "/demo/render.html");
+        list($body, $headers) = presto_encode($func, $vars);
+        $this->assertContains("Content-type: text/html", $headers);
+        $this->assertTag(array("tag" => "html"), $body);
+    }
+    
+    /**
+     * @expectedException PrestoException
+     */
+    public function testExceptionFail()
+    {
+        presto_exec("presto_get_demo_alwaysFail0", array(), true);
+    }
+    
+    /**
+     * @expectedException PrestoException
+     * @expectedExceptionCode 404
+     */
+    public function testExceptionNotFound()
+    {
+        presto_exec("presto_get_not_found", array(), true);
+    }
+    
+    /**
+     * @expectedException PrestoException
+     * @expectedExceptionCode 405
+     */
+    public function testExceptionInvalidRequest()
+    {
+        presto_exec("", array(), true);
     }
 }
