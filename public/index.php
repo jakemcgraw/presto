@@ -1,7 +1,7 @@
 <?php
 
 require_once "../lib/presto.php";
-require_once "../app/demo.php";
+require_once "../app/api/demo.php";
 
 $base_url = "/";
 $force_filetype = null; // json, js (jsonp) and xml supported
