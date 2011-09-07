@@ -95,7 +95,6 @@ function presto_get_demo_multipleKeys()
     return array(true, "hello" => "world");
 }
 
-
 function presto_get_demo_httpError()
 {
     return array(false, array(
@@ -104,4 +103,10 @@ function presto_get_demo_httpError()
             "code" => 599,
         ),
     ));
+}
+
+function presto_get_demo_render()
+{
+    require_once LIB_DIR . "/render.php";
+    return render_layout("demo.phtml", array("title" => "Test", "hello" => "world"));
 }

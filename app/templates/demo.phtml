@@ -1,3 +1,5 @@
-<h1>Demo</h1>
-<p><?php echo $demo ?></p>
-
+<h1><?php echo $title ?></h1>
+<h2><?php echo $world ?></h2>
+<ul>
+    <?php echo render_partial("html_li.phtml", array("a", "b", "c")) ?>
+</ul>

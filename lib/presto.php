@@ -195,10 +195,15 @@ function presto_exec($func, array $vars=array(), $throw_exception=false)
     return array($success, $result);
 }
 
-function presto_send($body, array $headers=array())
+function presto_send($body, array $headers=array(), $hide_500=false)
 {
-    foreach($headers as $header) {
-        header($header);
+    foreach($headers as $type => $header) {
+        if ($hide_500 && strpos($header, "HTTP/1.1 5") === 0) {
+            // do nothing
+        }
+        else {
+            header($header);
+        }
     }
     echo $body;
 }
@@ -222,7 +227,7 @@ function presto_encode($func, array $vars=array(), $type="json", $with_request=t
         return array(
             "Invalid Request, invalid API response type " . htmlspecialchars($type),
             array(
-                "http" => "HTTP/1.0 400 Invalid Request",
+                "http" => "HTTP/1.1 400 Invalid Request",
             )
         );
     }
@@ -234,7 +239,7 @@ function presto_encode($func, array $vars=array(), $type="json", $with_request=t
         return array(
             "Internal Server Error, un-handled API response type " . htmlspecialchars($type),
             array(
-                "http" => "HTTP/1.0 500 Internal Server Error",
+                "http" => "HTTP/1.1 500 Internal Server Error",
             )
         );
     }
@@ -259,11 +264,11 @@ function presto_encode($func, array $vars=array(), $type="json", $with_request=t
     }
     
     if (!$success) {
-        if (isset($result["error"]["status"])) {
-            $headers["http"] = "HTTP/1.0 " . $result["error"]["code"] . " " . $result["error"]["status"];
+        if (is_array($result["error"]) && array_key_exists("status", $result["error"])) {
+            $headers["http"] = "HTTP/1.1 " . $result["error"]["code"] . " " . $result["error"]["status"];
         }
         else {
-            $headers["http"] = "HTTP/1.0 500 Internal Server Error";
+            $headers["http"] = "HTTP/1.1 500 Internal Server Error";
         }
         $response["result"] = $result;
     }
@@ -285,7 +290,7 @@ function presto_encode_json(array $response, array $headers=array())
     $json = @json_encode($response);
     
     if (false === $json) {
-        $headers["http"] = "HTTP/1.0 500 Internal Server Error";
+        $headers["http"] = "HTTP/1.1 500 Internal Server Error";
         $json = "{\"success\":\"false\", \"error\":\"Unable to encode API response, JSON error\", \"errno\":\"".(500 + ((int) json_last_error()))."\"}";
     }
     
@@ -297,7 +302,7 @@ function presto_encode_json(array $response, array $headers=array())
 function presto_encode_jsonp(array $response, array $headers=array())
 {
     if (!isset($response["request"]["vars"]["callback"])) {
-        $headers["http"] = "HTTP/1.0 400 Bad Request";
+        $headers["http"] = "HTTP/1.1 400 Bad Request";
         $body = "Missing required parameter 'callback'\n";
         return array($body, $headers);
     }

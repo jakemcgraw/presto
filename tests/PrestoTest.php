@@ -182,7 +182,7 @@ class PrestoTest extends PHPUnit_Framework_TestCase
     {
         list($func) = presto_route("GET", "/demo/http-error/");
         list($body, $headers) = presto_encode($func);
-        $this->assertContains("HTTP/1.0 599 Failboat", $headers);
+        $this->assertContains("HTTP/1.1 599 Failboat", $headers);
         $response = @json_decode($body, true);
         $this->assertInternalType("array", $response);
         $this->assertArrayHasKey("result", $response);
