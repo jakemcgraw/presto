@@ -97,16 +97,16 @@ function presto_get_demo_multipleKeys()
 
 function presto_get_demo_httpError()
 {
-    return array(false, array(
-        "error" => array(
-            "status" => "Failboat",
-            "code" => 599,
-        ),
-    ));
+    return array(false, presto_http_response(599, "Failboat"));
 }
 
 function presto_get_demo_render()
 {
     require_once LIB_DIR . "/render.php";
     return render_layout("demo.phtml", array("title" => "Test", "hello" => "world"));
+}
+
+function presto_get_demo_redirect()
+{
+    return presto_redirect("http://foobar.com");
 }

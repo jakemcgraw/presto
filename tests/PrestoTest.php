@@ -116,13 +116,15 @@ class PrestoTest extends PHPUnit_Framework_TestCase
             list($success, $result) = presto_exec($bad_input);
             $this->assertFalse($success);
             $this->assertInternalType("array", $result);
-            $this->assertEquals(405, $result["error"]["code"]);
+            $this->assertArrayHasKey("error", $result);
+            $this->assertEquals("405 Method Not Allowed", $result["error"]);
         }
         
         list($success, $result) = presto_exec("presto_will_fail");
         $this->assertFalse($success);
         $this->assertInternalType("array", $result);
-        $this->assertEquals(404, $result["error"]["code"]);
+        $this->assertArrayHasKey("error", $result);
+        $this->assertEquals("404 Not Found", $result["error"]);
         
         list($success, $result) = presto_exec("presto_get_demo_echo", array("echo" => "hello"));
         $this->assertTrue($success);
@@ -187,7 +189,7 @@ class PrestoTest extends PHPUnit_Framework_TestCase
         $this->assertInternalType("array", $response);
         $this->assertArrayHasKey("result", $response);
         $this->assertEquals("false", $response["success"]);
-        $this->assertEquals(array("error" => array("status" => "Failboat", "code" => 599)), $response["result"]);
+        $this->assertEquals("599 Failboat", $response["result"]["error"]);
         
         // json
         list($func, $vars) = presto_route("GET", "/demo/echo/");
@@ -237,8 +239,23 @@ class PrestoTest extends PHPUnit_Framework_TestCase
         // html
         list($func, $vars) = presto_route("GET", "/demo/render.html");
         list($body, $headers) = presto_encode($func, $vars);
-        $this->assertContains("Content-type: text/html", $headers);
+        $this->assertContains("Content-type: text/html;charset=UTF-8", $headers);
         $this->assertTag(array("tag" => "html"), $body);
+    }
+    
+    public function testRedirect()
+    {
+        $result = presto_redirect("http://foobar.com");
+        $this->assertInternalType("array", $result);
+        $this->assertArrayHasKey("_presto_http", $result);
+        $this->assertContains("HTTP/1.1 302 Found", $result["_presto_http"]);
+        $this->assertArrayHasKey("Location", $result["_presto_http"]);
+        $this->assertEquals("http://foobar.com", $result["_presto_http"]["Location"]);
+        
+        list($func, $vars) = presto_route("GET", "/demo/redirect");
+        list($body, $headers) = presto_encode($func, $vars);
+        $this->assertContains("HTTP/1.1 302 Found", $headers);
+        $this->assertContains("Location: http://foobar.com", $headers);
     }
     
     /**
@@ -251,7 +268,7 @@ class PrestoTest extends PHPUnit_Framework_TestCase
     
     /**
      * @expectedException PrestoException
-     * @expectedExceptionCode 404
+     * @expectedExceptionMessage 404 Not Found
      */
     public function testExceptionNotFound()
     {
@@ -260,7 +277,7 @@ class PrestoTest extends PHPUnit_Framework_TestCase
     
     /**
      * @expectedException PrestoException
-     * @expectedExceptionCode 405
+     * @expectedExceptionMessage 405 Method Not Allowed
      */
     public function testExceptionInvalidRequest()
     {
