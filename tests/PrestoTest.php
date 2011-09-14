@@ -110,6 +110,14 @@ class PrestoTest extends PHPUnit_Framework_TestCase
         $this->assertEquals(array("hello" => "world", "_presto_filetype" => "js"), $vars);
     }
     
+    public function testRouteAjax()
+    {
+        list($func, $vars) = presto_route("GET", "/foo/bar.js", "/", array("X-Requested-With" => "XmlHttpRequest"));
+        $this->assertInternalType("array", $vars);
+        $this->assertArrayHasKey("_presto_ajax", $vars);
+        $this->assertTrue($vars["_presto_ajax"]);
+    }
+    
     public function testExec()
     {
         foreach(array("", 0, 1, true, false, array(), new stdClass, "will_fail") as $bad_input) {

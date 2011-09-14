@@ -6,10 +6,11 @@
  * @param string $method HTTP request method (head, get, post, put, delete)
  * @param string $request HTTP path
  * @param string $base_url Prefix HTTP paths (optional)
+ * @param array $headers HTTP request headers (optional)
  * @return mixed [presto function, variables] on success, FALSE on error
  * @author Jake McGraw <social@jakemcgraw.com>
  */
-function presto_route($method, $request, $base_url=null)
+function presto_route($method, $request, $base_url=null, array $headers=array())
 {
     $allowed_methods = array("get", "post", "put", "delete", "head");
     $method = strtolower($method);
@@ -90,6 +91,15 @@ function presto_route($method, $request, $base_url=null)
     if (isset($last) && false !== strpos($last, ".")) {
         if (preg_match("/\.(\w+)$/", $last, $match)) {
             $vars["_presto_filetype"] = $match[1];
+        }
+    }
+    
+    // check for X-Requested-With
+    foreach($headers as $field => $value) {
+        if ("x-requested-with" == strtolower($field)) {
+            if ("xmlhttprequest" == strtolower($value)) {
+                $vars["_presto_ajax"] = true;
+            }
         }
     }
     
@@ -336,10 +346,19 @@ function presto_encode_xml(array $response, array $headers=array())
 function presto_encode_html(array $response, array $headers=array())
 {
     if (!is_string($response["result"])) {
-        throw new PrestoException("HTML responses support strings only");
+        foreach($headers as $header) {
+            if (strpos($header, "Location:") === 0) {
+                $html = "<!DOCTYPE html><html><body><h1>Redirecting you to <a href=\"$header\">$header</a></h1></body></html>";
+                break;
+            }
+        }
+        if (!isset($html)) {
+            throw new PrestoException("HTML responses support strings only");
+        }
     }
-    
-    $html = $response["result"];
+    else {
+        $html = $response["result"];
+    }
     
     $headers[] = "Content-type: text/html;charset=UTF-8";
     
@@ -366,15 +385,61 @@ function presto_redirect($location)
 
 function presto_http_response($code=200, $message="OK", $location=null)
 {
-    $response = array("HTTP/1.1 $code $message");
+    
     if (null !== $location) {
-        $response["Location"] = $location;
+        $response = array(
+            "HTTP/1.1 302 Found",
+            "Location" => $location
+        );
     }
+    else {
+        $response = array(
+            "HTTP/1.1 $code $message"
+        );
+    }
+    
     $return = array("_presto_http" => $response);
+    
     if ($code > 399) {
         $return["error"] = "$code $message";
     }
+    
     return $return;
+}
+
+function presto_whitelist($func, array $whitelist=array())
+{
+    if (!function_exists($func)) {
+        return true;
+    }
+    if (empty($whitelist)) {
+        return false;
+    }
+    $pattern = "/(" . implode("|", $whitelist) . ")$/";
+    return preg_match($pattern, $func);
+}
+
+
+function presto_func_to_path($func, array $vars=array())
+{
+    $func = preg_replace('/^presto_(' . implode("|", array("head", "get", "post", "put", "delete")) . ')_/', "", $func);
+    $parts = explode("_", $func);
+    foreach($parts as $idx => $entry) {
+        if ($entry == "index") {
+            unset($parts[$idx]);
+        }
+        else {
+            $parts[$idx] = preg_replace_callback('/[A-Z]/', function($match){ return "-" . strtolower($match[1]); }, $entry);
+        }
+    }
+    foreach($vars as $idx => $entry) {
+        if (!is_int($idx)) {
+            $parts[] = $idx;
+        }
+        $parts[] = $entry;
+    }
+    
+    return "/" . implode("/", $parts);
 }
 
 /**
